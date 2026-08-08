@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIDUS - Biometrics & Underwriting Demo</title>
+    <script src="evtrack.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1, h2 { color: #2c3e50; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], input[type="email"], select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { background-color: #3498db; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-right: 10px; }
+        button:hover { background-color: #2980b9; }
+        button:disabled { background-color: #95a5a6; cursor: not-allowed; }
+        .btn-download { background-color: #27ae60; }
+        .btn-download:hover { background-color: #219a52; }
+        .btn-secondary { background-color: #6c757d; }
+        .btn-secondary:hover { background-color: #5a6268; }
+        .alert { padding: 15px; background-color: #d4edda; color: #155724; margin-bottom: 20px; border-radius: 4px; display: none; }
+        .alert.denied { background-color: #f8d7da; color: #721c24; }
+        .alert.review { background-color: #fff3cd; color: #856404; }
+        .results { margin-top: 30px; padding: 0; background-color: #fff; border: 1px solid #dee2e6; border-radius: 8px; display: none; overflow: hidden; }
+        .results-header { background: linear-gradient(135deg, #1a237e 0%, #283593 100%); color: white; padding: 20px 24px; }
+        .results-header h2 { margin: 0 0 4px 0; color: white; font-size: 20px; }
+        .results-header .subtitle { color: rgba(255,255,255,0.7); font-size: 13px; }
+        .results-body { padding: 24px; }
+        .decision-banner { text-align: center; padding: 16px; border-radius: 6px; margin-bottom: 20px; font-size: 18px; font-weight: bold; }
+        .decision-APPROVED { background-color: #e8f5e9; color: #2e7d32; border: 2px solid #2e7d32; }
+        .decision-DENIED { background-color: #ffebee; color: #c62828; border: 2px solid #c62828; }
+        .decision-REVIEW_REQUIRED { background-color: #fff3e0; color: #e65100; border: 2px solid #e65100; }
+        .score-row { display: flex; justify-content: space-around; margin-bottom: 20px; flex-wrap: wrap; }
+        .score-card { text-align: center; padding: 12px 16px; background: #f8f9fa; border-radius: 6px; min-width: 140px; margin: 4px; }
+        .score-card .label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+        .score-card .value { font-size: 22px; font-weight: bold; color: #2c3e50; margin-top: 4px; }
+        .section { margin-bottom: 20px; }
+        .section-title { font-size: 14px; font-weight: bold; color: #1a237e; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid #e8eaf6; }
+        .factor-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .factor-table th { background: #1a237e; color: white; padding: 8px 10px; text-align: left; }
+        .factor-table td { padding: 8px 10px; border-bottom: 1px solid #eee; }
+        .factor-table tr:nth-child(even) { background: #f8f9fa; }
+        .impact-POSITIVE { color: #2e7d32; font-weight: bold; }
+        .impact-NEGATIVE { color: #c62828; font-weight: bold; }
+        .impact-NEUTRAL { color: #757575; }
+        .explanation-box { background: #f8f9fa; border-left: 4px solid #1a237e; padding: 12px 16px; border-radius: 0 6px 6px 0; font-size: 13px; line-height: 1.6; color: #333; margin-bottom: 12px; }
+        .agent-detail { background: #f8f9fa; border-radius: 6px; padding: 12px 16px; margin-bottom: 10px; }
+        .agent-detail .agent-name { font-weight: bold; color: #1a237e; font-size: 13px; text-transform: uppercase; }
+        .agent-detail .agent-meta { font-size: 12px; color: #666; margin-top: 2px; }
+        .agent-detail .agent-reasoning { font-size: 12px; color: #555; margin-top: 6px; line-height: 1.5; }
+        .actions-bar { display: flex; gap: 10px; margin-top: 16px; padding-top: 16px; border-top: 1px solid #eee; }
+        pre { white-space: pre-wrap; word-wrap: break-word; background: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 4px; font-size: 12px; max-height: 300px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>AIDUS Loan Application</h1>
+    <p>This form simulates the loan application process. It actively tracks your mouse movements and generates a device fingerprint to ensure identity integrity.</p>
+    
+    <div id="statusAlert" class="alert"></div>
+
+    <form id="loanForm">
+        <div class="form-group">
+            <label for="fullName">Full Name</label>
+            <input type="text" id="fullName" required value="John Doe">
+        </div>
+        <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" required value="john.doe@example.com">
+        </div>
+        <div class="form-group">
+            <label for="username">Social Username (for OSINT)</label>
+            <input type="text" id="username" required value="johndoe123">
+        </div>
+        <div class="form-group">
+            <label for="panNumber">PAN Number</label>
+            <input type="text" id="panNumber" required value="ABCDE1234F">
+        </div>
+        <div class="form-group">
+            <label for="income">Declared Monthly Income</label>
+            <input type="text" id="income" required value="85000">
+        </div>
+        <div class="form-group">
+            <label for="bureauScore">Traditional Bureau Score (300-900)</label>
+            <input type="number" id="bureauScore" required value="650" min="300" max="900">
+        </div>
+        
+        <button type="button" id="submitBtn">Submit Application & Evaluate</button>
+        <button type="button" id="biometricsBtn" style="background-color: #6c757d;">Check Biometrics Result</button>
+    </form>
+
+    <div class="results" id="resultsSection">
+        <div class="results-header">
+            <h2>Evaluation Results</h2>
+            <div class="subtitle" id="resultsSubtitle">AIDUS Multi-Agent Underwriting Report</div>
+        </div>
+        <div class="results-body" id="resultsBody"></div>
+    </div>
+</div>
+
+<script>
+    // Initialize SDK
+    const tracker = new EvTrack({
+        endpoint: 'http://localhost:8000/api/v1/biometrics'
+    });
+    
+    let currentApplicantId = localStorage.getItem('currentApplicantId');
+    let currentSessionToken = localStorage.getItem('currentSessionToken');
+
+    // Start tracking on load
+    window.addEventListener('DOMContentLoaded', async () => {
+        window.addEventListener('beforeunload', (event) => {
+            console.warn("PAGE IS UNLOADING/RELOADING!", new Error().stack);
+            event.preventDefault();
+            event.returnValue = "Are you sure you want to exit?";
+        });
+
+        // If returning from mock bank oauth
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('consent_status') === 'success' && currentApplicantId) {
+            console.log("Consent success detected. Applicant ID:", currentApplicantId);
+            // Remove the query param to prevent infinite reload loop with Live Server
+            window.history.replaceState({}, document.title, window.location.pathname);
+            console.log("URL scrubbed, triggering evaluateUnderwriting...");
+            evaluateUnderwriting();
+            return;
+        }
+
+        // Otherwise, start fresh
+        localStorage.removeItem('currentApplicantId');
+        currentSessionToken = await tracker.init();
+        localStorage.setItem('currentSessionToken', currentSessionToken);
+        console.log("EvTrack initialized with session:", currentSessionToken);
+    });
+
+    document.getElementById('submitBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        btn.innerText = "Creating Applicant & Initiating Bank Connection...";
+        
+        try {
+            // 1. Send CAPI event
+            await tracker.sendCapiEvent('form_submit', { formId: 'loanForm' });
+
+            // 2. Stop tracking to flush final points
+            tracker.stopTracking();
+
+            // 3. Create Applicant
+            const appRes = await fetch('http://localhost:8000/api/v1/applicants', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: document.getElementById('email').value,
+                    full_name: document.getElementById('fullName').value,
+                    username: document.getElementById('username').value,
+                    pan_number: document.getElementById('panNumber').value,
+                    declared_income: parseFloat(document.getElementById('income').value),
+                    session_token: currentSessionToken
+                })
+            });
+            const applicant = await appRes.json();
+            currentApplicantId = applicant.id;
+            localStorage.setItem('currentApplicantId', currentApplicantId);
+
+            // 4. Initiate Consent (Redirects to Mock Bank)
+            const consentRes = await fetch('http://localhost:8000/api/v1/consent/initiate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    applicant_id: currentApplicantId,
+                    scopes: ["accounts", "transactions", "balances"]
+                })
+            });
+            const consent = await consentRes.json();
+            
+            // Redirect to Mock Bank
+            window.location.href = consent.authorization_url;
+
+        } catch (error) {
+            console.error(error);
+            alert("Error initiating application.");
+            btn.innerText = "Submit Application & Evaluate";
+            btn.disabled = false;
+        }
+    });
+
+    async function evaluateUnderwriting() {
+        console.log("evaluateUnderwriting started!");
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        console.log("Button disabled");
+        
+        const statuses = [
+            "Applying Privacy Guardrails...",
+            "Running Cash-Flow Agent...",
+            "Running OSINT Agent...",
+            "Running Biometrics Agent...",
+            "Synthesizing Risk Score...",
+            "Running Self-Check Audit...",
+            "Generating Explainability..."
+        ];
+        
+        const delay = ms => new Promise(res => setTimeout(res, ms));
+
+        const evalPromise = fetch('http://localhost:8000/api/v1/underwriting/evaluate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                applicant_id: currentApplicantId,
+                include_cashflow: true,
+                include_osint: true,
+                include_biometrics: true,
+                baseline_bureau_score: isNaN(parseInt(document.getElementById('bureauScore').value)) ? 650 : parseInt(document.getElementById('bureauScore').value)
+            })
+        });
+
+        try {
+            for (let status of statuses) {
+                btn.innerText = status;
+                await delay(400);
+            }
+            
+            btn.innerText = "Finalizing Decision...";
+            
+            const evalRes = await evalPromise;
+            const decision = await evalRes.json();
+
+            renderResults(decision);
+            
+            const alert = document.getElementById('statusAlert');
+            alert.style.display = 'block';
+            alert.className = 'alert';
+            if (decision.decision === 'DENIED') alert.className += ' denied';
+            else if (decision.decision === 'REVIEW_REQUIRED') alert.className += ' review';
+            alert.innerText = `Decision: ${decision.decision} | Risk Score: ${decision.final_risk_score}`;
+            
+        } catch (error) {
+            console.error(error);
+            alert("Error during evaluation.");
+        } finally {
+            btn.innerText = "Submit Application & Evaluate";
+            btn.disabled = false;
+        }
+    }
+
+    function asciiBar(score, width) {
+        width = width || 20;
+        if (score == null) return 'N/A';
+        var clamped = Math.max(0, Math.min(1, score));
+        var filled = Math.round(clamped * width);
+        var empty = width - filled;
+        var bar = '\u2588'.repeat(filled) + '\u2591'.repeat(empty);
+        var pct = Math.round(clamped * 100);
+        return bar + '  (' + pct + '%)';
+    }
+
+    function renderResults(d) {
+        const section = document.getElementById('resultsSection');
+        const body = document.getElementById('resultsBody');
+        const subtitle = document.getElementById('resultsSubtitle');
+
+        const created = d.created_at ? new Date(d.created_at).toLocaleString() : 'N/A';
+        subtitle.textContent = 'Applicant: ' + d.applicant_id + '  |  Generated: ' + created;
+
+        const confPct = d.confidence != null ? (d.confidence * 100).toFixed(1) + '%' : 'N/A';
+        let html = '';
+
+        // Decision banner
+        html += '<div class="decision-banner decision-' + d.decision + '">' + d.decision + '</div>';
+
+        // Score summary line
+        html += '<div style="text-align:center;margin-bottom:20px;font-size:14px;color:#333;">';
+        html += '<b>Risk Score:</b> ' + (d.final_risk_score?.toFixed(4) ?? 'N/A');
+        html += '  |  <b>Confidence:</b> ' + confPct;
+        html += '</div>';
+
+        // ── I. Application & Telemetry Summary ──
+        html += '<div class="section"><div class="section-title">I. Application &amp; Telemetry Summary</div>';
+        html += '<table class="factor-table"><thead><tr><th>Metric Parameter</th><th>Ingested System Value</th></tr></thead><tbody>';
+        const summaryRows = [
+            ['Applicant ID', d.applicant_id || 'N/A'],
+            ['Decision Outcome', d.decision || 'N/A'],
+            ['Final Synthesized Risk Score', d.final_risk_score?.toFixed(4) ?? 'N/A'],
+            ['Adjusted Bureau Score', d.adjusted_bureau_score != null ? d.adjusted_bureau_score : 'N/A'],
+            ['System Classification Confidence', confPct],
+            ['Model Tier Utilized', d.model_tier || 'N/A'],
+            ['Total Incurred Cost (USD)', '$' + (d.total_cost_usd?.toFixed(6) ?? '0')],
+            ['Cumulative Tokens Consumed', d.total_tokens_used ?? 0],
+            ['Core Agent Latency (ms)', d.agent_latency_ms ?? 0],
+            ['Session Privacy Budget Spent', d.privacy_budget_spent?.toFixed(4) ?? '0'],
+            ['Requires Human Intervention', d.requires_human_review ? 'Yes' : 'No'],
+            ['Timestamp (UTC)', created],
+        ];
+        for (const r of summaryRows) {
+            html += '<tr><td><b>' + r[0] + '</b></td><td>' + r[1] + '</td></tr>';
+        }
+        html += '</tbody></table></div>';
+
+        // ── II. Microservice Risk Breakdown (ASCII bars) ──
+        html += '<div class="section"><div class="section-title">II. Microservice Risk Breakdown</div>';
+        const agentBars = [
+            ['Cashflow Agent Risk', d.cashflow_score, 0.35],
+            ['OSINT Agent Risk', d.osint_score, 0.25],
+            ['Biometrics Agent Risk', d.biometric_score, 0.25],
+        ];
+        for (const ab of agentBars) {
+            const label = ab[0], score = ab[1], weight = ab[2];
+            const scoreStr = score != null ? score.toFixed(4) : 'N/A';
+            const bar = asciiBar(score);
+            const wPct = Math.round(weight * 100) + '%';
+            html += '<div style="margin-bottom:8px;font-size:13px;">';
+            html += '<b>' + label + ':</b>  ' + scoreStr;
+            html += '  |  <code style="font-size:12px;background:#f5f5f5;padding:2px 6px;border-radius:3px;">' + bar + '</code>';
+            html += '  (' + wPct + ')';
+            html += '</div>';
+        }
+        html += '</div>';
+
+        // ── III. Contributing Underwriting Factors ──
+        if (d.contributing_factors && d.contributing_factors.length > 0) {
+            html += '<div class="section"><div class="section-title">III. Contributing Underwriting Factors</div>';
+            html += '<table class="factor-table"><thead><tr><th>Risk Factor</th><th>Weight</th><th>Provenance</th><th>Impact</th><th>Telemetry Details &amp; Heuristics</th></tr></thead><tbody>';
+            for (const f of d.contributing_factors) {
+                html += '<tr>';
+                html += '<td><b>' + (f.factor || 'N/A') + '</b></td>';
+                html += '<td>' + (f.weight?.toFixed(2) ?? 'N/A') + '</td>';
+                html += '<td>' + (f.source || 'N/A') + '</td>';
+                html += '<td class="impact-' + f.impact + '">' + (f.impact || 'N/A') + '</td>';
+                html += '<td>' + (f.details || '') + '</td>';
+                html += '</tr>';
+            }
+            html += '</tbody></table></div>';
+        }
+
+        // ── IV. Compliance & Decision Explanations ──
+        html += '<div class="section"><div class="section-title">IV. Compliance &amp; Decision Explanations</div>';
+        if (d.consumer_explanation) {
+            html += '<div style="margin-bottom:12px;">';
+            html += '<div style="font-weight:bold;font-size:12px;color:#1a237e;margin-bottom:4px;">Consumer-Facing Explanation</div>';
+            html += '<div class="explanation-box">' + d.consumer_explanation + '</div>';
+            html += '</div>';
+        }
+        if (d.regulator_explanation) {
+            html += '<div>';
+            html += '<div style="font-weight:bold;font-size:12px;color:#1a237e;margin-bottom:4px;">Regulatory Audit Disclosure (Regulator-Facing)</div>';
+            html += '<div class="explanation-box">' + d.regulator_explanation + '</div>';
+            html += '</div>';
+        }
+        html += '</div>';
+
+        // ── V. Sub-Agent Diagnostic Outputs ──
+        if (d.agent_outputs && d.agent_outputs.length > 0) {
+            html += '<div class="section"><div class="section-title">V. Sub-Agent Diagnostic Outputs</div>';
+            for (const a of d.agent_outputs) {
+                const scoreStr = a.score != null ? a.score.toFixed(4) : 'N/A';
+                html += '<div class="agent-detail">';
+                html += '<div class="agent-name">' + (a.agent_name || 'unknown').toUpperCase();
+                html += '  |  Risk Score: ' + scoreStr;
+                html += '  |  Model: ' + (a.model_used || 'N/A') + '</div>';
+                if (a.reasoning) {
+                    html += '<div class="agent-reasoning">[Diagnostic Log: ' + a.reasoning + ']</div>';
+                }
+                html += '</div>';
+            }
+            html += '</div>';
+        }
+
+        // ── Actions ──
+        html += '<div class="actions-bar">';
+        html += '<button class="btn-download" onclick="downloadReport(\'' + d.applicant_id + '\')">Download PDF Report</button>';
+        html += '<button class="btn-secondary" onclick="toggleRawJson()">View Raw JSON</button>';
+        html += '</div>';
+
+        // Raw JSON (hidden)
+        html += '<div id="rawJsonSection" style="display:none;margin-top:16px;">';
+        html += '<pre>' + JSON.stringify(d, null, 2) + '</pre>';
+        html += '</div>';
+
+        body.innerHTML = html;
+        section.style.display = 'block';
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function toggleRawJson() {
+        const el = document.getElementById('rawJsonSection');
+        el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+
+    async function downloadReport(applicantId) {
+        try {
+            const res = await fetch(`http://localhost:8000/api/v1/underwriting/download-report/${applicantId}`);
+            if (!res.ok) {
+                const err = await res.json();
+                alert(err.detail || 'Failed to download report.');
+                return;
+            }
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `AIDUS_Report_${applicantId}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            console.error(e);
+            alert('Error downloading report.');
+        }
+    }
+
+    document.getElementById('biometricsBtn').addEventListener('click', async () => {
+        if (!currentSessionToken) {
+            alert("Tracking hasn't started yet.");
+            return;
+        }
+        
+        try {
+            const res = await fetch(`http://localhost:8000/api/v1/biometrics/analysis/${currentSessionToken}`);
+            if (res.ok) {
+                const analysis = await res.json();
+                const section = document.getElementById('resultsSection');
+                const body = document.getElementById('resultsBody');
+                const subtitle = document.getElementById('resultsSubtitle');
+                subtitle.textContent = 'Biometrics Analysis';
+                body.innerHTML = `<pre>${JSON.stringify(analysis, null, 2)}</pre>`;
+                section.style.display = 'block';
+            } else {
+                alert("Could not fetch analysis. Maybe try making some mouse movements and waiting a moment for points to flush.");
+            }
+        } catch (e) {
+            alert("Error fetching biometrics analysis.");
+        }
+    });
+</script>
+
+</body>
+</html>
