@@ -1,0 +1,78 @@
+# ============================================
+# AIDUS - Git Ignore Rules
+# ============================================
+
+# Secrets & Environment Variables
+.env
+.env.*
+!.env.example
+*.env
+
+# Python Bytecode & Build Artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Testing & Linting Caches
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# ML Model Binary Artifacts
+backend/ml/saved_models/*.pt
+backend/ml/saved_models/*.joblib
+backend/ml/saved_models/*.pkl
+backend/ml/saved_models/*.onnx
+backend/ml/saved_models/*.h5
+backend/ml/saved_models/*.pth
+
+# Generated Legal Audit Certificates
+backend/legal_audits/*.pdf
+
+# Database & Cache Data Directories/Files
+*.db
+*.sqlite
+*.sqlite3
+postgres_data/
+redis_data/
+
+# Logs
+*.log
+logs/
+
+# IDE & OS Specific Files
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+*.swp
+*.swo

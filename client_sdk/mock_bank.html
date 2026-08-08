@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finexer Sandbox Bank</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0d6efd;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .logo svg {
+            margin-right: 10px;
+        }
+        h2 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 30px;
+            font-weight: normal;
+        }
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #0d6efd;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #0b5ed7;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .disclaimer {
+            font-size: 12px;
+            color: #888;
+            margin-top: 20px;
+        }
+        .spinner {
+            display: none;
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #0d6efd;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #loadingText {
+            display: none;
+            color: #0d6efd;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="logo">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M1 3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3zm2-1v10h10V2H3zm2 3h6v1H5V5zm0 3h6v1H5V8zm0 3h3v1H5v-1z"/>
+        </svg>
+        Finexer Sandbox Bank
+    </div>
+    <h2>Securely connect your account</h2>
+    
+    <div id="loginForm">
+        <div class="form-group">
+            <label for="username">Username / Customer ID</label>
+            <input type="text" id="username" value="demo_user" required>
+        </div>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" value="password123" required>
+        </div>
+        <button id="authBtn">Authorize Access</button>
+    </div>
+
+    <div class="spinner" id="spinner"></div>
+    <div id="loadingText">Synthesizing financial history (AI-powered)...</div>
+
+    <div class="disclaimer">
+        This is a mock sandbox environment. No real banking credentials are required. By clicking "Authorize", you agree to generate a simulated financial history via AI.
+    </div>
+</div>
+
+<script>
+    // Get state token from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const stateToken = urlParams.get('state');
+
+    if (!stateToken) {
+        alert("Missing consent token (state) in URL.");
+    }
+
+    document.getElementById('authBtn').addEventListener('click', async () => {
+        if (!stateToken) return;
+
+        const btn = document.getElementById('authBtn');
+        const spinner = document.getElementById('spinner');
+        const loadingText = document.getElementById('loadingText');
+        const form = document.getElementById('loginForm');
+
+        // Show loading state
+        form.style.display = 'none';
+        spinner.style.display = 'block';
+        loadingText.style.display = 'block';
+
+        try {
+            // Call backend to authorize and trigger LLM generation
+            const res = await fetch(`http://localhost:8000/api/v1/consent/mock-authorize`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    consent_token_id: stateToken
+                })
+            });
+
+            if (res.ok) {
+                // Success, redirect back
+                window.location.href = `index.html?consent_status=success`;
+            } else {
+                const err = await res.json();
+                alert("Error during mock authorization: " + (err.detail || "Unknown"));
+                form.style.display = 'block';
+                spinner.style.display = 'none';
+                loadingText.style.display = 'none';
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Network error.");
+            form.style.display = 'block';
+            spinner.style.display = 'none';
+            loadingText.style.display = 'none';
+        }
+    });
+</script>
+</body>
+</html>

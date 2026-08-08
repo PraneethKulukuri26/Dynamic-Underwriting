@@ -1,0 +1,94 @@
+# ============================================
+# AIDUS - Docker Compose Stack
+# ============================================
+# Services: FastAPI backend, PostgreSQL, Redis, Frontend
+# Sherlock containers spawned on-demand via Docker SDK
+
+services:
+  # --- FastAPI Backend ---
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aidus-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app/backend          # Hot reload during development
+      - ./client_sdk:/app/client_sdk
+      - /var/run/docker.sock:/var/run/docker.sock  # Docker socket for Sherlock
+      - model_data:/app/backend/ml/saved_models    # Persist trained models
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - aidus-network
+    restart: unless-stopped
+
+  # --- Frontend (Static Files) ---
+  frontend:
+    image: nginx:alpine
+    container_name: aidus-frontend
+    ports:
+      - "5500:80"
+    volumes:
+      - ./client_sdk:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
+    networks:
+      - aidus-network
+    restart: unless-stopped
+
+  # --- PostgreSQL Database ---
+  postgres:
+    image: postgres:16-alpine
+    container_name: aidus-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-aidus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aidus_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-aidus_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aidus} -d ${POSTGRES_DB:-aidus_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aidus-network
+    restart: unless-stopped
+
+  # --- Redis Cache ---
+  redis:
+    image: redis:7-alpine
+    container_name: aidus-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aidus-network
+    restart: unless-stopped
+
+networks:
+  aidus-network:
+    driver: bridge
+
+volumes:
+  pgdata:
+    driver: local
+  redis_data:
+    driver: local
+  model_data:
+    driver: local
